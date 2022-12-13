@@ -15,17 +15,22 @@ import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.AccountDAO;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.exception.InvalidAccountException;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.Account;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.ExpenseType;
+import lk.ac.mrt.cse.dbs.simpleexpensemanager.database.AccountTable;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.database.DatabaseHelper;
 
 public class PersistenceMemoryAccountDAO implements AccountDAO {
-    ArrayList<String> accountNumbersList = new ArrayList<>();
-    ArrayList<Account> accountList = new ArrayList<>();
+    private  ArrayList<String> accountNumbersList;
+    private ArrayList<Account> accountList;
     private Context context;
-    DatabaseHelper databaseHelper;
+    private DatabaseHelper databaseHelper;
+    private AccountTable accountTable;
 
     public PersistenceMemoryAccountDAO(Context context, DatabaseHelper databaseHelper) {
         this.databaseHelper = databaseHelper;
         this.context = context;
+        accountTable = new AccountTable();
+        accountNumbersList = new ArrayList<>();
+        accountList = new ArrayList<>();
     }
 
     @Override
@@ -34,16 +39,16 @@ public class PersistenceMemoryAccountDAO implements AccountDAO {
         accountNumbersList=new ArrayList<String>();
         try {
             SQLiteDatabase sqLiteDatabase = databaseHelper.getReadableDatabase();
-            Cursor cursor = sqLiteDatabase.query("Accounts", new String[]{"accountNO"},
+            Cursor cursor = sqLiteDatabase.query(accountTable.getTableName(), new String[]{accountTable.getAccountNo()},
                     null, null, null, null, null);
             while (cursor.moveToNext()) {
-                accountNumbersList.add(cursor.getString(cursor.getColumnIndex("accountNO")));
+                accountNumbersList.add(cursor.getString(cursor.getColumnIndex(accountTable.getAccountNo())));
             }
             cursor.close();
             sqLiteDatabase.close();
         }
         catch (SQLiteException ex){
-            Toast toast = Toast.makeText(null,"Database is not available",Toast.LENGTH_SHORT); // null context problem
+            Toast toast = Toast.makeText(null,"Database is not available",Toast.LENGTH_SHORT);
             toast.show();
         }
 
@@ -55,13 +60,17 @@ public class PersistenceMemoryAccountDAO implements AccountDAO {
         accountList = new ArrayList<Account>();
         try {
             SQLiteDatabase sqLiteDatabase = databaseHelper.getReadableDatabase();
-            Cursor cursor = sqLiteDatabase.query("Accounts", new String[]{"accountNO","bankName","accountHolderName","balance"},
+            Cursor cursor = sqLiteDatabase.query(accountTable.getTableName(), new String[]{
+                            accountTable.getAccountNo(),accountTable.getBankName(),
+                            accountTable.getAccountHolderName(),
+                            accountTable.getBalance()},
                     null, null, null, null, null);
+
             while (cursor.moveToNext()){
-                String accountNO = cursor.getString(cursor.getColumnIndex("accountNO"));
-                String bankName = cursor.getString(cursor.getColumnIndex("bankName"));
-                String accountHolderName = cursor.getString(cursor.getColumnIndex("accountHolderName"));
-                Double balance = cursor.getDouble(cursor.getColumnIndex("balance"));
+                String accountNO = cursor.getString(cursor.getColumnIndex(accountTable.getAccountNo()));
+                String bankName = cursor.getString(cursor.getColumnIndex(accountTable.getBankName()));
+                String accountHolderName = cursor.getString(cursor.getColumnIndex(accountTable.getAccountHolderName()));
+                Double balance = cursor.getDouble(cursor.getColumnIndex(accountTable.getBalance()));
 
                 Account account = new Account(accountNO,bankName,accountHolderName,balance);
                 accountList.add(account);
@@ -72,7 +81,7 @@ public class PersistenceMemoryAccountDAO implements AccountDAO {
             sqLiteDatabase.close();
         }
         catch (SQLiteException ex){
-            Toast toast = Toast.makeText(context,"Database is not available",Toast.LENGTH_SHORT); // null context problem
+            Toast toast = Toast.makeText(context,"Database is not available",Toast.LENGTH_SHORT);
             toast.show();
         }
 
@@ -81,16 +90,18 @@ public class PersistenceMemoryAccountDAO implements AccountDAO {
 
     @Override
     public Account getAccount(String accountNo) throws InvalidAccountException {
-        Account account = null;  // check this
+        Account account = null;
         try {
             SQLiteDatabase sqLiteDatabase1 = databaseHelper.getReadableDatabase();
-            Cursor cursor = sqLiteDatabase1.query("Accounts", new String[]{"accountNO","bankName","accountHolderName","balance"},
-                    "accountNO = ?", new String[] {accountNo}, null, null, null);
+            Cursor cursor = sqLiteDatabase1.query(accountTable.getTableName(),
+                    new String[]{accountTable.getAccountNo(),accountTable.getBankName(),
+                            accountTable.getAccountHolderName(),accountTable.getBalance()},
+                    accountTable.getAccountNo()+" = ?", new String[] {accountNo}, null, null, null);
             if (cursor.moveToNext()){
-                String accountNO = cursor.getString(cursor.getColumnIndex("accountNO"));
-                String bankName = cursor.getString(cursor.getColumnIndex("bankName"));
-                String accountHolderName = cursor.getString(cursor.getColumnIndex("accountHolderName"));
-                Double balance = cursor.getDouble(cursor.getColumnIndex("balance"));
+                String accountNO = cursor.getString(cursor.getColumnIndex(accountTable.getAccountNo()));
+                String bankName = cursor.getString(cursor.getColumnIndex(accountTable.getBankName()));
+                String accountHolderName = cursor.getString(cursor.getColumnIndex(accountTable.getAccountHolderName()));
+                Double balance = cursor.getDouble(cursor.getColumnIndex(accountTable.getBalance()));
 
                 account = new Account(accountNO,bankName,accountHolderName,balance);
 
@@ -100,7 +111,7 @@ public class PersistenceMemoryAccountDAO implements AccountDAO {
             sqLiteDatabase1.close();
         }
         catch (SQLiteException ex){
-            Toast toast = Toast.makeText(context,"Database is not available",Toast.LENGTH_SHORT); // null context problem
+            Toast toast = Toast.makeText(context,"Database is not available",Toast.LENGTH_SHORT);
             toast.show();
         }
         return account;
@@ -114,7 +125,7 @@ public class PersistenceMemoryAccountDAO implements AccountDAO {
 
     @Override
     public void removeAccount(String accountNo) throws InvalidAccountException {
-        databaseHelper.deleteRow("Accounts","accountNO",accountNo);
+        databaseHelper.deleteRow(accountTable.getTableName(),accountTable.getAccountNo(),accountNo);
     }
 
     @Override
@@ -123,13 +134,13 @@ public class PersistenceMemoryAccountDAO implements AccountDAO {
         Account account = getAccount(accountNo);
         SQLiteDatabase sqLiteDatabase = databaseHelper.getWritableDatabase();
         if ( expenseType == ExpenseType.EXPENSE) {
-            updateValues.put("balance", account.getBalance() - amount);
+            updateValues.put(accountTable.getBalance(), account.getBalance() - amount);
         }
         else if ( expenseType == ExpenseType.INCOME){
-            updateValues.put("balance", account.getBalance()+amount);
+            updateValues.put(accountTable.getBalance(), account.getBalance()+amount);
         }
-        long p=sqLiteDatabase.update("Accounts",updateValues,"accountNO = ?",new String[] {accountNo});
-        Log.d("Gimahn",String.valueOf(p));
+        long p=sqLiteDatabase.update(accountTable.getTableName(),updateValues,accountTable.getBalance()+" = ?",new String[] {accountNo});
+        // Log.d("Gimahn",String.valueOf(p));
         sqLiteDatabase.close();
     }
 }

@@ -15,14 +15,9 @@ import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.ExpenseType;
 public class DatabaseHelper extends SQLiteOpenHelper{
     private  static DatabaseHelper databaseHelper;
     private Context context;
-    private static final String DATABASE_NAME = "ExpenseDB";
-    private static final int DATABASE_VERSION = 4;
+    private static final String DATABASE_NAME = "200574N";
+    private static final int DATABASE_VERSION = 7;
 
-    private static final String TABLE_NAME = "Transactions";
-    private static final String DATE = "date";
-    private static final String ACCOUNT_NO = "account_no";
-    private static final String TYPE = "type";
-    private static final String AMOUNT = "amount";
 
     public DatabaseHelper(@Nullable Context context){
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -32,41 +27,46 @@ public class DatabaseHelper extends SQLiteOpenHelper{
 
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
-        String query = "CREATE TABLE " + TABLE_NAME + "("+
-                "_id " + " INTEGER PRIMARY KEY AUTOINCREMENT,"+
-                DATE + " NUMERIC ," +
-                ACCOUNT_NO + " TEXT ," +
-                TYPE + " TEXT ," +
-                AMOUNT + " INTEGER );" ;
-        sqLiteDatabase.execSQL(query);
+        TransactionTable transactionTable = new TransactionTable();
+        AccountTable accountTable = new AccountTable();
 
-        String query2 = "CREATE TABLE " + " Accounts" + "("+
-                "_id " + " INTEGER PRIMARY KEY AUTOINCREMENT,"+
-                "bankName " + " TEXT ," +
-                "accountNO " + " TEXT ," +
-                "accountHolderName " + " TEXT ," +
-                "balance " + " INTEGER );" ;
+        String query1 = "CREATE TABLE " + transactionTable.getTableName() + "("+
+                transactionTable.getTransactionId() + " INTEGER PRIMARY KEY AUTOINCREMENT ," +
+                transactionTable.getDate() + " NUMERIC ," +
+                transactionTable.getAccountNo() + " TEXT ," +
+                transactionTable.getExpenseType() + " TEXT ," +
+                transactionTable.getAmount() + " INTEGER );" ;
+        sqLiteDatabase.execSQL(query1);
+
+        String query2 = "CREATE TABLE " + accountTable.getTableName() + "("+
+                accountTable.getAccountNo() + " TEXT PRIMARY KEY ," +
+                accountTable.getBankName() + " TEXT ," +
+                accountTable.getAccountHolderName() + " TEXT ," +
+                accountTable.getBalance() + " INTEGER );" ;
         sqLiteDatabase.execSQL(query2);
 
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
-        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME+";");
-        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + "Accounts;");
+        TransactionTable transactionTable = new TransactionTable();
+        AccountTable accountTable = new AccountTable();
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + transactionTable.getTableName()+";");
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + accountTable.getTableName()+";");
         onCreate(sqLiteDatabase);
 
     }
     public void addTransaction (Date date, String account_no , ExpenseType type, double amount){
+        TransactionTable transactionTable = new TransactionTable();
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
 
-        contentValues.put(DATE, String.valueOf(date));
-        contentValues.put(ACCOUNT_NO,String.valueOf(account_no));
-        contentValues.put(TYPE, String.valueOf(type));
-        contentValues.put(AMOUNT, amount);
+        contentValues.put(transactionTable.getDate(), String.valueOf(date));
+        contentValues.put(transactionTable.getAccountNo(),String.valueOf(account_no));
+        contentValues.put(transactionTable.getExpenseType(), String.valueOf(type));
+        contentValues.put(transactionTable.getAmount(), amount);
 
-        long result = sqLiteDatabase.insert(TABLE_NAME,null, contentValues);
+        long result = sqLiteDatabase.insert(transactionTable.getTableName(),null, contentValues);
         if(result == -1){
             Toast.makeText(context, "Failed to Add", Toast.LENGTH_SHORT).show();
         }
@@ -77,16 +77,17 @@ public class DatabaseHelper extends SQLiteOpenHelper{
     }
 
     public  void addAccount(String accountNO,String bankName, String accountHolderName, double balance){
+        AccountTable accountTable = new AccountTable();
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
 
-        contentValues.put("accountNO",accountNO);
-        contentValues.put("bankName",bankName);
-        contentValues.put("accountHolderName",accountHolderName);
-        contentValues.put("balance",balance);
+        contentValues.put(accountTable.getAccountNo(),accountNO);
+        contentValues.put(accountTable.getBankName(),bankName);
+        contentValues.put(accountTable.getAccountHolderName(),accountHolderName);
+        contentValues.put(accountTable.getBalance(),balance);
 
 
-        long result = sqLiteDatabase.insert("Accounts",null, contentValues);
+        long result = sqLiteDatabase.insert(accountTable.getTableName(),null, contentValues);
         if(result == -1){
             Toast.makeText(context, "Failed to Add", Toast.LENGTH_SHORT).show();
         }
@@ -97,7 +98,8 @@ public class DatabaseHelper extends SQLiteOpenHelper{
 
 
     public Cursor readAllData(){
-        String query = "SELECT * FROM " + TABLE_NAME + " ;";
+        TransactionTable transactionTable = new TransactionTable();
+        String query = "SELECT * FROM " + transactionTable.getTableName() + " ;";
         SQLiteDatabase sqLiteDatabase = this.getReadableDatabase();
 
         Cursor cursor= null;
@@ -108,14 +110,16 @@ public class DatabaseHelper extends SQLiteOpenHelper{
     }
 
     public Cursor readColumn(String column){
+        TransactionTable transactionTable = new TransactionTable();
         SQLiteDatabase sqLiteDatabase = this.getReadableDatabase();
-        Cursor cursor = sqLiteDatabase.query(TABLE_NAME,new String[] {column},null,null,null,null,null);
+        Cursor cursor = sqLiteDatabase.query(transactionTable.getTableName(),new String[] {column},null,null,null,null,null);
         return cursor;
     }
 
     public void deleteAllData(){
+        TransactionTable transactionTable = new TransactionTable();
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
-        sqLiteDatabase.execSQL("DELETE FROM " + TABLE_NAME + " ;");
+        sqLiteDatabase.execSQL("DELETE FROM " + transactionTable.getTableName() + " ;");
     }
     public void deleteRow(String tableName, String row, String value){
         SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
